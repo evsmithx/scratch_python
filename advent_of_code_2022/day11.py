@@ -1,5 +1,5 @@
 from pprint import pprint
-from typing import List
+from typing import List, Tuple
 
 input = """Monkey 0:
   Starting items: 79, 98
@@ -29,13 +29,15 @@ Monkey 3:
     If true: throw to monkey 0
     If false: throw to monkey 1"""
 
-# with open("input11.txt", "r") as fp:
-#     input = fp.read()
+with open("input11.txt", "r") as fp:
+    input = fp.read()
 
 monkey_items: List[List[int]] = []
+monkey_function_params: List[Tuple] = []
 monkey_functions: List[callable] = []
 
 input_iter = iter(input.split('\n'))
+divisor_product = 1
 while True:
     try:
         line = next(input_iter)
@@ -65,20 +67,28 @@ while True:
             line = next(input_iter).strip().split(' ')  # False
             monkey_false = int(line[5])
 
-            func = f"""
+            monkey_function_params.append((op, right, divisor, monkey_true, monkey_false))
+            divisor_product *= divisor
+
+    except StopIteration:
+        break
+
+print("divisor product", divisor_product)
+# "keep worry levels manageable" by moduloing by divisor product, which doesn't affect the output of the tests
+for mfp in monkey_function_params:
+    op, right, divisor, monkey_true, monkey_false = mfp
+    func = f"""
 def monkeyfunc(old):
     new = old {op} {right}
+    new = new % {divisor_product}
     if new % {divisor} == 0:
         return new, {monkey_true}
     else:
         return new, {monkey_false}
 """
-            exec_output = {}
-            exec(func, exec_output)
-            monkey_functions.append(exec_output["monkeyfunc"])
-    except StopIteration:
-        break
-
+    exec_output = {}
+    exec(func, exec_output)
+    monkey_functions.append(exec_output["monkeyfunc"])
 
 counts = [0] * len(monkey_items)
 for r in range(10000):
@@ -97,3 +107,4 @@ counts.sort(reverse=True)
 print(counts[0]*counts[1])
 
 #part 1: 113220
+#part 2: 30599555965
