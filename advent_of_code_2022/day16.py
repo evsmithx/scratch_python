@@ -1,4 +1,5 @@
-from typing import Set, List
+import time
+from typing import List, Tuple, FrozenSet
 
 inp = """Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA
@@ -26,33 +27,10 @@ for line in inp.splitlines():
 print(flows)
 print(adjacency)
 
-# find paths - put an O if the valve is opened
-# score paths
 
-def score_path(path):
-    score = 0
-    flow = 0
-    current_valve = path[0]
-    open_valves = {x: False for x in flows.keys()}
+demo_path: List[str] = ['AA', 'DD', 'DD', 'CC', 'BB', 'BB', 'AA', 'II', 'JJ', 'JJ', 'II', 'AA', 'DD', 'EE', 'FF', 'GG',
+                        'HH', 'HH', 'GG', 'FF', 'EE', 'EE', 'DD', 'CC', 'CC']
 
-    for i, v in enumerate(path[1:]):
-        score += flow
-        if v == current_valve:
-            if open_valves[current_valve] is False:
-                flow += flows[current_valve]
-                open_valves[current_valve] = True
-        current_valve = v
-
-    if len(path) < 31:
-        score += flow * (31 - len(path))
-    return score
-
-print(score_path(['AA', 'DD', 'DD', 'CC', 'BB', 'BB', 'AA', 'II', 'JJ', 'JJ', 'II', 'AA', 'DD', 'EE', 'FF', 'GG', 'HH',
-                  'HH',
-                  'GG',
-                  'FF', 'EE', 'EE', 'DD', 'CC', 'CC']))
-print(score_path(['AA', 'DD', 'DD', 'CC', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD', 'CC', 'DD']))
-# exit(0)
 
 good_valves = set({x for x, y in flows.items() if y > 0})
 print(good_valves)
@@ -60,12 +38,15 @@ max_flow = 0
 max_path = []
 path_counter = 0
 
-def visit(path: List[str], open_valves: Set[str], score):
+
+# @functools.lru_cache(None)
+def visit(path: Tuple[str], open_valves: FrozenSet[str], score):
     global max_flow, max_path, path_counter
-    current_flow = sum([flows[x] for x in open_valves])
+    current_flow = sum((flows[x] for x in open_valves))
     score += current_flow
+    # print(len(path), current_flow, score)
     if len(path) == 30 or len(open_valves) == len(good_valves):
-        if len(path) <= 30:
+        if len(path) < 30:
             score += current_flow * (30 - len(path))
         if score > max_flow:
             max_flow = score
@@ -76,19 +57,40 @@ def visit(path: List[str], open_valves: Set[str], score):
         path_counter += 1
         return
     else:
-        current_valve = path[-1]
+        current_valve: str = path[-1]
         if current_valve not in open_valves and current_valve in good_valves:
-            visit(path + [current_valve], open_valves.union({current_valve}), score)
+            visit(path + (current_valve,), open_valves.union({current_valve}), score)
         for option in adjacency[path[-1]]:
-            visit(path + [option], open_valves, score)
+            visit(path + (option,), open_valves, score)
+
 
 def count_open(path):
     open_valves = set()
     p = path[0]
-    for q in path[1]:
+    for q in path[1:]:
+        # print(q, p)
         if q == p:
             open_valves.add(p)
         p = q
-    return open_valves
+    return frozenset(open_valves)
 
-visit(['AA'], set(), 0)
+
+total_flow = 0
+co = set()
+flow = 0
+i = 0
+for i in range(len(demo_path)):
+    co = count_open(demo_path[0:i + 1])
+    if i > 10:
+        print(demo_path[0:i + 1], co)
+        time_now = time.process_time()
+        visit(tuple(demo_path[0:i + 1]), co, total_flow)
+        print(time.process_time() - time_now)
+        break
+    flow = sum((flows[x] for x in co))
+    total_flow += flow
+    print(i + 1)
+    print(co)
+    print(flow)
+    print(total_flow)
+    print()
